@@ -1,0 +1,21 @@
+﻿@model TestCacheServisesWeb.Models.CitiesModel
+@{
+    Layout = null;
+}
+<!doctype html>
+<html>
+<head>
+    <title>Кеширование при помощи сервисов</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width">
+</head>
+<body>
+    <h2>Получение списка городов погрузки заказов с помощью Redis</h2>
+    <h3>Затраченное время @Model._ellapsedTime</h3>
+
+    @foreach (var item in Model._cities)
+    {
+        <p>@item</p>
+    }
+</body>
+</html>

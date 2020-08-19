@@ -1,0 +1,21 @@
+﻿@{
+    Layout = null;
+}
+<!doctype html>
+<html>
+<head>
+    <title>Кеширование при помощи сервисов</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width">
+</head>
+<body>
+    <h2>Кеширование при помощи сервисов</h2>
+    <p><a href="~/Home/OrderList">Получить список заказов 10248 - 10300 (Redis)</a></p>
+    <p><a href="~/Home/Order">Получить заказ 10248 (Redis)</a></p>
+    <p><a href="~/Home/Cities">Получить список городов отправления заказов (Redis)</a></p>
+
+    <p><a href="~/Home/OrderList">Получить список заказов 10248 - 10300 (Memcached)</a></p>
+    <p><a href="~/Home/Order">Получить заказ 10248 (Memcached)</a></p>
+    <p><a href="~/Home/Cities">Получить список городов отправления заказов (Memcached)</a></p>
+</body>
+</html>
