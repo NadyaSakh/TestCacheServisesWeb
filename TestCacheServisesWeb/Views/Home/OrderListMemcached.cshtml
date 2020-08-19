@@ -1,0 +1,46 @@
+﻿@model TestCacheServisesWeb.Models.OrderListModel
+@{
+    Layout = null;
+}
+<!doctype html>
+<html>
+<head>
+    <title>Кеширование с помощью сервисов</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width">
+</head>
+<body>
+    <h2>Получение списка заказов с 10248 по 10300 с помощью Memcached</h2>
+    <h3>Затраченное время @Model._ellapsedTime</h3>
+
+    <table>
+        <tr>
+            <td><b>OrderID</b></td>
+            <td><b>CustomerID</b></td>
+            <td><b>EmployeeID</b></td>
+            <td><b>OrderDate</b></td>
+            <td><b>RequiredDate</b></td>
+            <td><b>ShippedDate</b></td>
+            <td><b>ShipVia</b></td>
+            <td><b>Freight</b></td>
+            <td><b>ShipName</b></td>
+            <td><b>ShipAddress</b></td>
+            <td><b>ShipCity</b></td>
+            <td><b>ShipRegion</b></td>
+            <td><b>ShipPostalCode</b></td>
+            <td><b>ShipCountry</b></td>
+            <td></td>
+        </tr>
+        @foreach (var item in Model._orderList)
+            {
+            <tr>
+            @foreach (KeyValuePair<string, object> keyValue in item)
+                 {
+                    <td>@keyValue.Value</td>
+                 }
+
+            </tr>
+            }
+    </table>
+</body>
+</html>

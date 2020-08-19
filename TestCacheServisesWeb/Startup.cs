@@ -20,10 +20,9 @@ namespace TestCacheServisesWeb
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
+// TODO возможно нужно отключать сервисы, которые не используются, чтобы они не мешали использовать нужный кеш
         public void ConfigureServices(IServiceCollection services)
         {
-            /*services.AddControllers();*/
             services.AddControllersWithViews();
 
             //added to use in-memory cache
@@ -37,11 +36,17 @@ namespace TestCacheServisesWeb
             {
                 options.Configuration = "localhost:6379";
             });
+
+            // added to use memcached
+            services.AddEnyimMemcached();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            //to use memcached
+            app.UseEnyimMemcached();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
