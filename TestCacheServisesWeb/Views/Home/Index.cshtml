@@ -9,13 +9,34 @@
     <meta name="viewport" content="width=device-width">
 </head>
 <body>
-    <h2>Кеширование при помощи сервисов</h2>
-    <p><a href="~/Home/OrderList">Получить список заказов 10248 - 10300 (Redis)</a></p>
-    <p><a href="~/Home/Order">Получить заказ 10248 (Redis)</a></p>
-    <p><a href="~/Home/Cities">Получить список городов отправления заказов (Redis)</a></p>
+    <h2>Кеширование при помощи сервиса Redis</h2>
+    <p><a href="~/Home/OrderList">Получить список заказов 10248 - 10300 (Wait and policy Redis)</a></p>
+    <p><a href="~/Home/Order">Получить заказ 10248 (Wait and policy Redis)</a></p>
+    <p><a href="~/Home/Cities">Получить список городов отправления заказов (Wait and policy Redis)</a></p>
+    <br />
+    <p><a href="~/Home/OrdersSimpleRedis">Получить список заказов 10248 - 10300 (simple Redis)</a></p>
+    <p><a href="~/Home/OrderSimpleRedis">Получить заказ 10248 (simple Redis)</a></p>
+    <p><a href="~/Home/CitiesSimpleRedis">Получить список городов отправления заказов (simple Redis)</a></p>
+    <br />
+    <p><a href="~/Home/OrdersWaitRedis">Получить список заказов 10248 - 10300 (Wait Redis)</a></p>
+    <p><a href="~/Home/OrderWaitRedis">Получить заказ 10248 (Wait Redis)</a></p>
+    <p><a href="~/Home/CitiesWaitRedis">Получить список городов отправления заказов (Wait Redis)</a></p>
+    <br />
+    <p><a href="~/Home/OrdersPolicyRedis">Получить список заказов 10248 - 10300 (Policy Redis)</a></p>
+    <p><a href="~/Home/OrderPolicyRedis">Получить заказ 10248 (Policy Redis)</a></p>
+    <p><a href="~/Home/CitiesPolicyRedis">Получить список городов отправления заказов (Policy Redis)</a></p>
 
-    <p><a href="~/Home/OrderListMemcached">Получить список заказов 10248 - 10300 (Memcached)</a></p>
-    <p><a href="~/Home/OrderMemcached">Получить заказ 10248 (Memcached)</a></p>
-    <p><a href="~/Home/CitiesMemcached">Получить список городов отправления заказов (Memcached)</a></p>
+    <br />
+    <h2>Кеширование при помощи сервиса Memcache</h2>
+    <p><a href="~/Home/OrderListMemcached">Получить список заказов 10248 - 10300 (Wait and policy Memcached)</a></p>
+    <p><a href="~/Home/OrderMemcached">Получить заказ 10248 (Wait and policy Memcached)</a></p>
+    <p><a href="~/Home/CitiesMemcached">Получить список городов отправления заказов (Wait and policy Memcached)</a></p>
+    <br />
+    <p><a href="~/Home/OrderListPolicyMemcached">Получить список заказов 10248 - 10300 (Policy Memcached)</a></p>
+    <p><a href="~/Home/OrderPolicyMemcached">Получить заказ 10248 (Policy Memcached)</a></p>
+    <p><a href="~/Home/CitiesPolicyMemcached">Получить список городов отправления заказов (Policy Memcached)</a></p>
+    </br>
+    <p><a href="~/Home/CleanMemcachedCache">Отчистить кеш Memcached</a></p>
+    <p><a href="~/Home/CleanRedisCache">Отчистить кеш Redis</a></p>
 </body>
 </html>

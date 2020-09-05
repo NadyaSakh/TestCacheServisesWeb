@@ -2,12 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Alachisoft.NCache.Caching.Distributed;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using TestCacheServisesWeb.Services;
 
 namespace TestCacheServisesWeb
 {
@@ -24,13 +26,9 @@ namespace TestCacheServisesWeb
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
-
-            //added to use in-memory cache
-            services.AddMemoryCache();
-
-            //added to use distributed cache
-            services.AddDistributedMemoryCache();
-
+// внедрение зависимости RedisCacheService и MemcacheCacheService
+            services.AddTransient<RedisCacheService>();
+            services.AddTransient<MemcacheCacheService>();
             //added to use Redis cache
             services.AddStackExchangeRedisCache(options =>
             {
@@ -39,6 +37,8 @@ namespace TestCacheServisesWeb
 
             // added to use memcached
             services.AddEnyimMemcached();
+
+            
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

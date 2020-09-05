@@ -15,32 +15,21 @@ using Newtonsoft.Json;
 using TestCacheServisesWeb.DB;
 using TestCacheServisesWeb.DistributeCaching;
 using TestCacheServisesWeb.Models;
+using TestCacheServisesWeb.Services;
 using TestCacheServisesWeb.Utils;
 
 
-// todo как переписать без повторений функции кеширования для разных типов?
-// как использовать классы-сервисы для методов get?
 namespace TestCacheServisesWeb.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-
-        private static IDistributedCache _distributedCache;
-
-        private readonly IMemcachedClient _memcachedClient;
-
-        public HomeController(ILogger<HomeController> logger, IDistributedCache distributedCache, 
-            IMemcachedClient memcachedClient)
+        MemcacheCacheService _memcacheCacheService;
+        RedisCacheService _redisCacheService;
+       
+        public HomeController(MemcacheCacheService memcacheCacheService, RedisCacheService redisCacheService)
         {
-            _distributedCache = distributedCache;
-            _logger = logger;
-            _memcachedClient = memcachedClient;
-        }
-
-        public static IDistributedCache GetDistributedCache()
-        {
-            return _distributedCache;
+            _memcacheCacheService = memcacheCacheService;
+            _redisCacheService = redisCacheService;
         }
 
         public IActionResult Index()
@@ -54,15 +43,14 @@ namespace TestCacheServisesWeb.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        // memcached можно воспользоавться и через IDistributedCache
         [HttpGet]
         public async Task<IActionResult> OrderListMemcached()
         {
             Func<Task<List<Dictionary<string, object>>>> queryGetOrdersInfoAsync = () => GetData.QueryGetOrdersInfoAsync();
             Stopwatch stopWatch = Stopwatch.StartNew();
 
-            List<Dictionary<string, object>> orderList = await GetOrCreateOrdersListWaitAndPolicyMemcached(
-                queryGetOrdersInfoAsync, CacheKeys.OrdersInfo);
+            List<Dictionary<string, object>> orderList = await _memcacheCacheService.GetOrCreateOrdersListWaitAndPolicyMemcached(
+                queryGetOrdersInfoAsync, CacheKeys.OrdersInfoWaitAndPolicyMemcache);
             stopWatch.Stop();
             TimeSpan ts1 = stopWatch.Elapsed;
             string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
@@ -71,11 +59,13 @@ namespace TestCacheServisesWeb.Controllers
             return View(orderListModel);
         }
 
+        [HttpGet]
         public async Task<IActionResult> OrderMemcached()
         {
             Func<Task<Dictionary<string, object>>> queryGetOrderInfoAsync = () => GetData.QueryGetOrderInfoAsync();
             Stopwatch stopWatch = Stopwatch.StartNew();
-            Dictionary<string, object> order = await GetOrCreateOrderWaitAndPolicyMemcached(queryGetOrderInfoAsync, CacheKeys.OrderInfo);
+            Dictionary<string, object> order = await _memcacheCacheService.GetOrCreateOrderWaitAndPolicyMemcached(
+                queryGetOrderInfoAsync, CacheKeys.OrderInfoWaitAndPolicyMemcache);
 
             stopWatch.Stop();
             TimeSpan ts1 = stopWatch.Elapsed;
@@ -84,11 +74,14 @@ namespace TestCacheServisesWeb.Controllers
             OrderModel orderModel = new OrderModel(order, ellapsedTime);
             return View(orderModel);
         }
+
+        [HttpGet]
         public async Task<IActionResult> CitiesMemcached()
         {
             Func<Task<List<string>>> queryGetCitiesAsync = () => GetData.QueryGetCitiesAsync();
             Stopwatch stopWatch = Stopwatch.StartNew();
-            List<string> cities = await GetOrCreateCitiesWaitAndPolicyMemcached(queryGetCitiesAsync, CacheKeys.CityList);
+            List<string> cities = await _memcacheCacheService.GetOrCreateCitiesWaitAndPolicyMemcached(
+                queryGetCitiesAsync, CacheKeys.CityListWaitAndPolicyMemcache);
 
             stopWatch.Stop();
             TimeSpan ts1 = stopWatch.Elapsed;
@@ -98,14 +91,81 @@ namespace TestCacheServisesWeb.Controllers
             return View(citiesModel);
         }
 
+        // policy
+        [HttpGet]
+        public async Task<string> OrderListPolicyMemcached()
+        {
+            Func<Task<List<Dictionary<string, object>>>> queryGetOrdersInfoAsync = () => GetData.QueryGetOrdersInfoAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+
+            List<Dictionary<string, object>> orderList = await _memcacheCacheService.GetOrCreateOrdersListPolicy(
+                queryGetOrdersInfoAsync, CacheKeys.OrdersInfoPolicyMemcache);
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
+        }
+
+        [HttpGet]
+        public async Task<string> OrderPolicyMemcached()
+        {
+            Func<Task<Dictionary<string, object>>> queryGetOrderInfoAsync = () => GetData.QueryGetOrderInfoAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+            Dictionary<string, object> order = await _memcacheCacheService.GetOrCreateOrderPolicy(
+                queryGetOrderInfoAsync, CacheKeys.OrderInfoPolicyMemcache);
+
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
+        }
+
+        [HttpGet]
+        public async Task<string> CitiesPolicyMemcached()
+        {
+            Func<Task<List<string>>> queryGetCitiesAsync = () => GetData.QueryGetCitiesAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+            List<string> cities = await _memcacheCacheService.GetOrCreateCitiesPolicy(
+                queryGetCitiesAsync, CacheKeys.CityListPolicyMemcache);
+
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
+        }
+
+        [HttpGet]
+        public async Task<String> CleanMemcachedCache()
+        {
+            bool res = await _memcacheCacheService.cleanMemcacheCache();
+            if (res)
+            {
+                return "Кеш memcache отчищен";
+            }
+            else
+            {
+                return "Кеш Не отчищен";
+            }
+        }
+
+        [HttpGet]
+        public String CleanRedisCache()
+        {
+             _redisCacheService.cleanRedisCache();
+             return "Кеш redis отчищен";
+        }
+
         [HttpGet] 
         public async Task<IActionResult> OrderList()
         {
             Func<Task<List<Dictionary<string, object>>>> queryGetOrdersInfoAsync = () => GetData.QueryGetOrdersInfoAsync();
             Stopwatch stopWatch = Stopwatch.StartNew();
 
-            List<Dictionary<string, object>> orderList = await GetOrCreateOrdersListWaitAndPolicy(
-                queryGetOrdersInfoAsync, CacheKeys.OrdersInfo);
+            List<Dictionary<string, object>> orderList = await _redisCacheService.GetOrCreateOrdersListWaitAndPolicy(
+                queryGetOrdersInfoAsync, CacheKeys.OrdersInfoWaitAndPolicyRedis);
             stopWatch.Stop();
             TimeSpan ts1 = stopWatch.Elapsed;
             string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
@@ -117,7 +177,8 @@ namespace TestCacheServisesWeb.Controllers
         {
             Func<Task<Dictionary<string, object>>> queryGetOrderInfoAsync = () => GetData.QueryGetOrderInfoAsync();
             Stopwatch stopWatch = Stopwatch.StartNew();
-            Dictionary<string, object> order = await GetOrCreateOrderWaitAndPolicy(queryGetOrderInfoAsync, CacheKeys.OrderInfo);
+            Dictionary<string, object> order = await _redisCacheService.GetOrCreateOrderWaitAndPolicy(
+                queryGetOrderInfoAsync, CacheKeys.OrderInfoWaitAndPolicyRedis);
 
             stopWatch.Stop();
             TimeSpan ts1 = stopWatch.Elapsed;
@@ -130,7 +191,8 @@ namespace TestCacheServisesWeb.Controllers
         {
             Func<Task<List<string>>> queryGetCitiesAsync = () => GetData.QueryGetCitiesAsync();
             Stopwatch stopWatch = Stopwatch.StartNew();
-            List<string> cities = await GetOrCreateCitiesWaitAndPolicy(queryGetCitiesAsync, CacheKeys.CityList);
+            List<string> cities = await _redisCacheService.GetOrCreateCitiesWaitAndPolicy(queryGetCitiesAsync, 
+                CacheKeys.CityListWaitAndPolicyRedis);
 
             stopWatch.Stop();
             TimeSpan ts1 = stopWatch.Elapsed;
@@ -140,280 +202,126 @@ namespace TestCacheServisesWeb.Controllers
             return View(citiesModel);
         }
 
-        /* public async Task<List<Dictionary<string, object>>> GetOrCreateWait(Func<Task<List<Dictionary<string, object>>>> query, string key)
-         {
-             ConcurrentDictionary<object, SemaphoreSlim> _locks = new ConcurrentDictionary<object, SemaphoreSlim>();
-             List<Dictionary<string, object>> cacheEntry;
-             string serializedData;
-             var encodedData = await _distributedCache.GetAsync(key);
-             if (encodedData == null)
-             {
-                 SemaphoreSlim mylock = _locks.GetOrAdd(key, k => new SemaphoreSlim(1, 1));
-                 await mylock.WaitAsync();
-
-                 try
-                 {
-                     encodedData = await _distributedCache.GetAsync(key);
-                     if (encodedData == null)// Key not in cache, so get data.
-                     {
-                         cacheEntry = await query();
-                         serializedData = JsonConvert.SerializeObject(cacheEntry);
-                         encodedData = Encoding.UTF8.GetBytes(serializedData);
-                         await _distributedCache.SetAsync(key, encodedData);
-                     }
-                     else
-                     {
-                         serializedData = Encoding.UTF8.GetString(encodedData);
-                         cacheEntry = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(serializedData);
-                     }
-                 }
-                 finally
-                 {
-                     mylock.Release();
-                 }
-             }
-             else
-             {
-                 serializedData = Encoding.UTF8.GetString(encodedData);
-                 cacheEntry = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(serializedData);
-             }
-             return cacheEntry;
-         }
- */
-
-        public async Task<List<Dictionary<string, object>>> GetOrCreateOrdersListWaitAndPolicyMemcached(Func<Task<List<Dictionary<string, object>>>> query, string key)
+        public async Task<string> OrdersSimpleRedis()
         {
-            ConcurrentDictionary<object, SemaphoreSlim> _locks = new ConcurrentDictionary<object, SemaphoreSlim>();
-            List<Dictionary<string, object>> cacheEntry;
-            
-            var result = await _memcachedClient.GetAsync<List<Dictionary<string, object>>>(key);
-            if (!result.Success)
-            {
-                SemaphoreSlim mylock = _locks.GetOrAdd(key, k => new SemaphoreSlim(1, 1));
-                await mylock.WaitAsync();
-                try
-                {
-                    result = await _memcachedClient.GetAsync<List<Dictionary<string, object>>>(key);
-                    if (!result.Success)// Key not in cache, so get data.
-                    {
-                        cacheEntry = await query();
-                        await _memcachedClient.AddAsync(key, cacheEntry, 300);
-                    }
-                    else
-                    {
-                        cacheEntry = result.Value;
-                    }
-                }
-                finally
-                {
-                    mylock.Release();
-                }
-            }
-            else
-            {
-                cacheEntry = result.Value;
-            }
-            return cacheEntry;
+            Func<Task<List<Dictionary<string, object>>>> queryGetOrdersInfoAsync = () => GetData.QueryGetOrdersInfoAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+
+            List<Dictionary<string, object>> orderList = await _redisCacheService.GetOrCreateOrdersSimple(
+                queryGetOrdersInfoAsync, CacheKeys.OrdersInfoRedis);
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
+        }
+        public async Task<string> OrderSimpleRedis()
+        {
+            Func<Task<Dictionary<string, object>>> queryGetOrderInfoAsync = () => GetData.QueryGetOrderInfoAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+            Dictionary<string, object> order = await _redisCacheService.GetOrCreateOrderSimple(
+                queryGetOrderInfoAsync, CacheKeys.OrderInfoRedis);
+
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
+        }
+        public async Task<string> CitiesSimpleRedis()
+        {
+            Func<Task<List<string>>> queryGetCitiesAsync = () => GetData.QueryGetCitiesAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+            List<string> cities = await _redisCacheService.GetOrCreateCitiesSimple(queryGetCitiesAsync,
+                CacheKeys.CityListRedis);
+
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
         }
 
-        public async Task<Dictionary<string, object>> GetOrCreateOrderWaitAndPolicyMemcached(Func<Task<Dictionary<string, object>>> query,
-            string key)
+        // policy
+        public async Task<string> OrdersPolicyRedis()
         {
-            ConcurrentDictionary<object, SemaphoreSlim> _locks = new ConcurrentDictionary<object, SemaphoreSlim>();
-            Dictionary<string, object> cacheEntry;
+            Func<Task<List<Dictionary<string, object>>>> queryGetOrdersInfoAsync = () => GetData.QueryGetOrdersInfoAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
 
-            var result = await _memcachedClient.GetAsync<Dictionary<string, object>>(key);
-            if (!result.Success)
-            {
-                SemaphoreSlim mylock = _locks.GetOrAdd(key, k => new SemaphoreSlim(1, 1));
-                await mylock.WaitAsync();
-                try
-                {
-                    result = await _memcachedClient.GetAsync<Dictionary<string, object>>(key);
-                    if (!result.Success)// Key not in cache, so get data.
-                    {
-                        cacheEntry = await query();
-                        await _memcachedClient.AddAsync(key, cacheEntry, 300);
-                    }
-                    else
-                    {
-                        cacheEntry = result.Value;
-                    }
-                }
-                finally
-                {
-                    mylock.Release();
-                }
-            }
-            else
-            {
-                cacheEntry = result.Value;
-            }
-            return cacheEntry;
+            List<Dictionary<string, object>> orderList = await _redisCacheService.GetOrCreateOrdersPolicy(
+                queryGetOrdersInfoAsync, CacheKeys.OrdersInfoPolicyRedis);
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
+        }
+        public async Task<string> OrderPolicyRedis()
+        {
+            Func<Task<Dictionary<string, object>>> queryGetOrderInfoAsync = () => GetData.QueryGetOrderInfoAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+            Dictionary<string, object> order = await _redisCacheService.GetOrCreateOrderPolicy(
+                queryGetOrderInfoAsync, CacheKeys.OrderInfoPolicyRedis);
+
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
+        }
+        public async Task<string> CitiesPolicyRedis()
+        {
+            Func<Task<List<string>>> queryGetCitiesAsync = () => GetData.QueryGetCitiesAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+            List<string> cities = await _redisCacheService.GetOrCreateCitiesPolicy(queryGetCitiesAsync,
+                CacheKeys.CityListPolicyRedis);
+
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
         }
 
-        public async Task<List<string>> GetOrCreateCitiesWaitAndPolicyMemcached(Func<Task<List<string>>> query, string key)
+        // wait
+        public async Task<string> OrdersWaitRedis()
         {
-            ConcurrentDictionary<object, SemaphoreSlim> _locks = new ConcurrentDictionary<object, SemaphoreSlim>();
-            List<string> cacheEntry;
+            Func<Task<List<Dictionary<string, object>>>> queryGetOrdersInfoAsync = () => GetData.QueryGetOrdersInfoAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
 
-            var result = await _memcachedClient.GetAsync<List<string>>(key);
-            if (!result.Success)
-            {
-                SemaphoreSlim mylock = _locks.GetOrAdd(key, k => new SemaphoreSlim(1, 1));
-                await mylock.WaitAsync();
-                try
-                {
-                    result = await _memcachedClient.GetAsync<List<string>>(key);
-                    if (!result.Success)// Key not in cache, so get data.
-                    {
-                        cacheEntry = await query();
-                        await _memcachedClient.AddAsync(key, cacheEntry, 300);
-                    }
-                    else
-                    {
-                        cacheEntry = result.Value;
-                    }
-                }
-                finally
-                {
-                    mylock.Release();
-                }
-            }
-            else
-            {
-                cacheEntry = result.Value;
-            }
-            return cacheEntry;
+            List<Dictionary<string, object>> orderList = await _redisCacheService.GetOrCreateOrdersWait(
+                queryGetOrdersInfoAsync, CacheKeys.OrdersInfoWaitRedis);
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
         }
-
-        public async Task<List<Dictionary<string, object>>> GetOrCreateOrdersListWaitAndPolicy(Func<Task<List<Dictionary<string, object>>>> query, string key)
+        public async Task<string> OrderWaitRedis()
         {
-            ConcurrentDictionary<object, SemaphoreSlim> _locks = new ConcurrentDictionary<object, SemaphoreSlim>();
-            List<Dictionary<string, object>> cacheEntry;
-            string serializedData;
-            var encodedData = await _distributedCache.GetAsync(key);
-            if (encodedData == null)
-            {
-                SemaphoreSlim mylock = _locks.GetOrAdd(key, k => new SemaphoreSlim(1, 1));
-                await mylock.WaitAsync();
+            Func<Task<Dictionary<string, object>>> queryGetOrderInfoAsync = () => GetData.QueryGetOrderInfoAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+            Dictionary<string, object> order = await _redisCacheService.GetOrCreateOrderWait(
+                queryGetOrderInfoAsync, CacheKeys.OrderInfoWaitRedis);
 
-                try
-                {
-                    encodedData = await _distributedCache.GetAsync(key);
-                    if (encodedData == null)// Key not in cache, so get data.
-                    {
-                        cacheEntry = await query();
-                        serializedData = JsonConvert.SerializeObject(cacheEntry);
-                        encodedData = Encoding.UTF8.GetBytes(serializedData);
-                        var options = new DistributedCacheEntryOptions()
-                            .SetSlidingExpiration(TimeSpan.FromMinutes(5))
-                            .SetAbsoluteExpiration(DateTime.Now.AddHours(6));
-                        await _distributedCache.SetAsync(key, encodedData, options);
-                    }
-                    else
-                    {
-                        serializedData = Encoding.UTF8.GetString(encodedData);
-                        cacheEntry = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(serializedData);
-                    }
-                }
-                finally
-                {
-                    mylock.Release();
-                }
-            }
-            else
-            {
-                serializedData = Encoding.UTF8.GetString(encodedData);
-                cacheEntry = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(serializedData);
-            }
-            return cacheEntry;
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
+
+            return ellapsedTime;
         }
-
-        public async Task<Dictionary<string, object>> GetOrCreateOrderWaitAndPolicy(Func<Task<Dictionary<string, object>>> query, string key)
+        public async Task<string> CitiesWaitRedis()
         {
-            ConcurrentDictionary<object, SemaphoreSlim> _locks = new ConcurrentDictionary<object, SemaphoreSlim>();
-            Dictionary<string, object> cacheEntry;
-            string serializedData;
-            var encodedData = await _distributedCache.GetAsync(key);
-            if (encodedData == null)
-            {
-                SemaphoreSlim mylock = _locks.GetOrAdd(key, k => new SemaphoreSlim(1, 1));
-                await mylock.WaitAsync();
+            Func<Task<List<string>>> queryGetCitiesAsync = () => GetData.QueryGetCitiesAsync();
+            Stopwatch stopWatch = Stopwatch.StartNew();
+            List<string> cities = await _redisCacheService.GetOrCreateCitiesWait(queryGetCitiesAsync,
+                CacheKeys.CityListWaitRedis);
 
-                try
-                {
-                    encodedData = await _distributedCache.GetAsync(key);
-                    if (encodedData == null)// Key not in cache, so get data.
-                    {
-                        cacheEntry = await query();
-                        serializedData = JsonConvert.SerializeObject(cacheEntry);
-                        encodedData = Encoding.UTF8.GetBytes(serializedData);
-                        var options = new DistributedCacheEntryOptions()
-                            .SetSlidingExpiration(TimeSpan.FromMinutes(5))
-                            .SetAbsoluteExpiration(DateTime.Now.AddHours(6));
-                        await _distributedCache.SetAsync(key, encodedData, options);
-                    }
-                    else
-                    {
-                        serializedData = Encoding.UTF8.GetString(encodedData);
-                        cacheEntry = JsonConvert.DeserializeObject<Dictionary<string, object>>(serializedData);
-                    }
-                }
-                finally
-                {
-                    mylock.Release();
-                }
-            }
-            else
-            {
-                serializedData = Encoding.UTF8.GetString(encodedData);
-                cacheEntry = JsonConvert.DeserializeObject<Dictionary<string, object>>(serializedData);
-            }
-            return cacheEntry;
-        }
+            stopWatch.Stop();
+            TimeSpan ts1 = stopWatch.Elapsed;
+            string ellapsedTime = TimeUtils.showEllapsedTime(ts1);
 
-        public async Task<List<string>> GetOrCreateCitiesWaitAndPolicy(Func<Task<List<string>>> query, string key)
-        {
-            ConcurrentDictionary<object, SemaphoreSlim> _locks = new ConcurrentDictionary<object, SemaphoreSlim>();
-            List<string> cacheEntry;
-            string serializedData;
-            var encodedData = await _distributedCache.GetAsync(key);
-            if (encodedData == null)
-            {
-                SemaphoreSlim mylock = _locks.GetOrAdd(key, k => new SemaphoreSlim(1, 1));
-                await mylock.WaitAsync();
-
-                try
-                {
-                    encodedData = await _distributedCache.GetAsync(key);
-                    if (encodedData == null)// Key not in cache, so get data.
-                    {
-                        cacheEntry = await query();
-                        serializedData = JsonConvert.SerializeObject(cacheEntry);
-                        encodedData = Encoding.UTF8.GetBytes(serializedData);
-                        var options = new DistributedCacheEntryOptions()
-                            .SetSlidingExpiration(TimeSpan.FromMinutes(5))
-                            .SetAbsoluteExpiration(DateTime.Now.AddHours(6));
-                        await _distributedCache.SetAsync(key, encodedData, options);
-                    }
-                    else
-                    {
-                        serializedData = Encoding.UTF8.GetString(encodedData);
-                        cacheEntry = JsonConvert.DeserializeObject<List<string>>(serializedData);
-                    }
-                }
-                finally
-                {
-                    mylock.Release();
-                }
-            }
-            else
-            {
-                serializedData = Encoding.UTF8.GetString(encodedData);
-                cacheEntry = JsonConvert.DeserializeObject<List<string>>(serializedData);
-            }
-            return cacheEntry;
+            return ellapsedTime;
         }
     }
 }
